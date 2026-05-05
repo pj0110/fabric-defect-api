@@ -6,7 +6,9 @@ import os
 
 app = Flask(__name__)
 
-# 🔥 FIX: lazy loading (IMPORTANT)
+# 🔐 Get API key from environment
+API_KEY = os.environ.get("API_KEY")
+
 model = None
 
 def preprocess(image):
@@ -23,7 +25,11 @@ def home():
 def predict():
     global model
 
-    # 🔥 Load model only when needed
+    # 🔐 API KEY CHECK
+    key = request.headers.get("x-api-key")
+    if key != API_KEY:
+        return jsonify({"error": "Unauthorized"}), 401
+
     if model is None:
         model = tf.keras.models.load_model("model.keras")
 
@@ -37,7 +43,6 @@ def predict():
 
     return jsonify({"prediction": result})
 
-# 🔥 Render port fix (keep this)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
