@@ -7,7 +7,7 @@ import os
 app = Flask(__name__)
 
 # Load model
-model = tf.keras.models.load_model("model.h5")
+model = tf.keras.models.load_model("model.keras")
 
 def preprocess(image):
     image = image.resize((224,224))
