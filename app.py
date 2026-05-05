@@ -6,11 +6,11 @@ import os
 
 app = Flask(__name__)
 
-# Load model
-model = tf.keras.models.load_model("model.keras")
+# 🔥 FIX: lazy loading (IMPORTANT)
+model = None
 
 def preprocess(image):
-    image = image.resize((224,224))
+    image = image.resize((224, 224))
     image = np.array(image) / 255.0
     image = np.expand_dims(image, axis=0)
     return image
@@ -21,6 +21,12 @@ def home():
 
 @app.route("/predict", methods=["POST"])
 def predict():
+    global model
+
+    # 🔥 Load model only when needed
+    if model is None:
+        model = tf.keras.models.load_model("model.keras")
+
     file = request.files["file"]
     image = Image.open(file).convert("RGB")
 
@@ -31,6 +37,7 @@ def predict():
 
     return jsonify({"prediction": result})
 
+# 🔥 Render port fix (keep this)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
