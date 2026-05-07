@@ -1,8 +1,11 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
+
 import tensorflow as tf
 import numpy as np
+
 from PIL import Image
+
 import io
 import os
 
@@ -11,10 +14,14 @@ app = Flask(__name__)
 CORS(app)
 
 # =========================================================
-# MODEL
+# GLOBAL MODEL
 # =========================================================
 
 model = None
+
+# =========================================================
+# CLASSES
+# =========================================================
 
 classes = [
     "good",
@@ -35,7 +42,7 @@ def load_my_model():
     if model is None:
 
         base_model = tf.keras.applications.MobileNetV2(
-            input_shape=(64,64,3),
+            input_shape=(128,128,3),
             include_top=False,
             weights='imagenet'
         )
@@ -72,16 +79,19 @@ def load_my_model():
     return model
 
 # =========================================================
-# PREPROCESS IMAGE
+# IMAGE PREPROCESSING
 # =========================================================
 
 def preprocess_image(image):
 
-    image = image.resize((64,64))
+    image = image.resize((128,128))
 
     image = np.array(image) / 255.0
 
-    image = np.expand_dims(image, axis=0)
+    image = np.expand_dims(
+        image,
+        axis=0
+    )
 
     return image
 
@@ -92,7 +102,9 @@ def preprocess_image(image):
 @app.route("/")
 def home():
 
-    return render_template("index.html")
+    return render_template(
+        "index.html"
+    )
 
 # =========================================================
 # PREDICT
@@ -101,39 +113,56 @@ def home():
 @app.route("/predict", methods=["POST"])
 def predict():
 
-    if "file" not in request.files:
+    try:
+
+        if "file" not in request.files:
+
+            return jsonify({
+                "error": "No file uploaded"
+            })
+
+        file = request.files["file"]
+
+        image = Image.open(
+            io.BytesIO(file.read())
+        ).convert("RGB")
+
+        processed = preprocess_image(
+            image
+        )
+
+        loaded_model = load_my_model()
+
+        prediction = loaded_model.predict(
+            processed
+        )
+
+        predicted_class = classes[
+            np.argmax(prediction)
+        ]
+
+        confidence = float(
+            np.max(prediction)
+        )
 
         return jsonify({
-            "error": "No file uploaded"
+
+            "prediction": predicted_class,
+
+            "confidence": round(
+                confidence * 100,
+                2
+            )
         })
 
-    file = request.files["file"]
+    except Exception as e:
 
-    image = Image.open(
-        io.BytesIO(file.read())
-    ).convert("RGB")
-
-    processed = preprocess_image(image)
-
-    loaded_model = load_my_model()
-
-    prediction = loaded_model.predict(processed)
-
-    predicted_class = classes[
-        np.argmax(prediction)
-    ]
-
-    confidence = float(
-        np.max(prediction)
-    )
-
-    return jsonify({
-        "prediction": predicted_class,
-        "confidence": round(confidence * 100, 2)
-    })
+        return jsonify({
+            "error": str(e)
+        })
 
 # =========================================================
-# RUN
+# RUN APP
 # =========================================================
 
 if __name__ == "__main__":
