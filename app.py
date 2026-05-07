@@ -10,32 +10,81 @@ app = Flask(__name__)
 
 CORS(app)
 
-# Load trained model
-model = tf.keras.models.load_model(
-    "fabric_model.keras",
-    compile=False
+# =========================
+# BUILD MODEL ARCHITECTURE
+# =========================
+
+base_model = tf.keras.applications.InceptionV3(
+    input_shape=(224, 224, 3),
+    include_top=False,
+    weights=None
 )
 
-# Classes
+base_model.trainable = False
+
+x = tf.keras.layers.GlobalAveragePooling2D()(base_model.output)
+
+x = tf.keras.layers.Dense(
+    128,
+    activation='relu'
+)(x)
+
+x = tf.keras.layers.Dropout(0.4)(x)
+
+output = tf.keras.layers.Dense(
+    2,
+    activation='softmax'
+)(x)
+
+model = tf.keras.Model(
+    inputs=base_model.input,
+    outputs=output
+)
+
+# =========================
+# LOAD SAVED WEIGHTS
+# =========================
+
+model.load_weights("fabric_weights.weights.h5")
+
+# =========================
+# CLASSES
+# =========================
+
 classes = ["good", "defective"]
 
-# Image preprocessing
+# =========================
+# IMAGE PREPROCESSING
+# =========================
+
 def preprocess_image(image):
+
     image = image.resize((224, 224))
+
     image = np.array(image) / 255.0
+
     image = np.expand_dims(image, axis=0)
+
     return image
 
-# Home route
+# =========================
+# HOME PAGE
+# =========================
+
 @app.route("/")
 def home():
+
     return render_template("index.html")
 
-# Prediction route
+# =========================
+# PREDICTION API
+# =========================
+
 @app.route("/predict", methods=["POST"])
 def predict():
 
     if "file" not in request.files:
+
         return jsonify({
             "error": "No file uploaded"
         })
@@ -59,6 +108,15 @@ def predict():
         "confidence": round(confidence * 100, 2)
     })
 
+# =========================
+# RUN APP
+# =========================
+
 if __name__ == "__main__":
+
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+
+    app.run(
+        host="0.0.0.0",
+        port=port
+    )
