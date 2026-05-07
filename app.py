@@ -17,7 +17,19 @@ CORS(app)
 model = None
 
 # =========================
-# LOAD MODEL LAZILY
+# MULTICLASS LABELS
+# =========================
+
+classes = [
+    "good",
+    "hole",
+    "objects",
+    "oil spot",
+    "thread error"
+]
+
+# =========================
+# LOAD MODEL
 # =========================
 
 def load_my_model():
@@ -27,14 +39,16 @@ def load_my_model():
     if model is None:
 
         base_model = tf.keras.applications.MobileNetV2(
-            input_shape=(128, 128, 3),
+            input_shape=(128,128,3),
             include_top=False,
             weights=None
         )
 
         base_model.trainable = False
 
-        x = tf.keras.layers.GlobalAveragePooling2D()(base_model.output)
+        x = tf.keras.layers.GlobalAveragePooling2D()(
+            base_model.output
+        )
 
         x = tf.keras.layers.Dense(
             128,
@@ -44,7 +58,7 @@ def load_my_model():
         x = tf.keras.layers.Dropout(0.4)(x)
 
         output = tf.keras.layers.Dense(
-            2,
+            5,
             activation='softmax'
         )(x)
 
@@ -60,18 +74,12 @@ def load_my_model():
     return model
 
 # =========================
-# CLASSES
-# =========================
-
-classes = ["good", "defective"]
-
-# =========================
 # IMAGE PREPROCESSING
 # =========================
 
 def preprocess_image(image):
 
-    image = image.resize((128, 128))
+    image = image.resize((128,128))
 
     image = np.array(image) / 255.0
 
@@ -115,9 +123,13 @@ def predict():
 
         prediction = loaded_model.predict(processed)
 
-        predicted_class = classes[np.argmax(prediction)]
+        predicted_class = classes[
+            np.argmax(prediction)
+        ]
 
-        confidence = float(np.max(prediction))
+        confidence = float(
+            np.max(prediction)
+        )
 
         return jsonify({
             "prediction": predicted_class,
@@ -136,7 +148,9 @@ def predict():
 
 if __name__ == "__main__":
 
-    port = int(os.environ.get("PORT", 5000))
+    port = int(
+        os.environ.get("PORT", 5000)
+    )
 
     app.run(
         host="0.0.0.0",
