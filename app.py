@@ -11,41 +11,51 @@ app = Flask(__name__)
 CORS(app)
 
 # =========================
-# BUILD MODEL ARCHITECTURE
+# GLOBAL MODEL VARIABLE
 # =========================
 
-base_model = tf.keras.applications.InceptionV3(
-    input_shape=(224, 224, 3),
-    include_top=False,
-    weights=None
-)
-
-base_model.trainable = False
-
-x = tf.keras.layers.GlobalAveragePooling2D()(base_model.output)
-
-x = tf.keras.layers.Dense(
-    128,
-    activation='relu'
-)(x)
-
-x = tf.keras.layers.Dropout(0.4)(x)
-
-output = tf.keras.layers.Dense(
-    2,
-    activation='softmax'
-)(x)
-
-model = tf.keras.Model(
-    inputs=base_model.input,
-    outputs=output
-)
+model = None
 
 # =========================
-# LOAD SAVED WEIGHTS
+# LOAD MODEL LAZILY
 # =========================
 
-model.load_weights("fabric_weights.weights.h5")
+def load_my_model():
+
+    global model
+
+    if model is None:
+
+        base_model = tf.keras.applications.InceptionV3(
+            input_shape=(224, 224, 3),
+            include_top=False,
+            weights=None
+        )
+
+        base_model.trainable = False
+
+        x = tf.keras.layers.GlobalAveragePooling2D()(base_model.output)
+
+        x = tf.keras.layers.Dense(
+            128,
+            activation='relu'
+        )(x)
+
+        x = tf.keras.layers.Dropout(0.4)(x)
+
+        output = tf.keras.layers.Dense(
+            2,
+            activation='softmax'
+        )(x)
+
+        model = tf.keras.Model(
+            inputs=base_model.input,
+            outputs=output
+        )
+
+        model.load_weights("fabric_weights.weights.h5")
+
+    return model
 
 # =========================
 # CLASSES
@@ -77,7 +87,7 @@ def home():
     return render_template("index.html")
 
 # =========================
-# PREDICTION API
+# PREDICTION ROUTE
 # =========================
 
 @app.route("/predict", methods=["POST"])
@@ -97,7 +107,9 @@ def predict():
 
     processed = preprocess_image(image)
 
-    prediction = model.predict(processed)
+    loaded_model = load_my_model()
+
+    prediction = loaded_model.predict(processed)
 
     predicted_class = classes[np.argmax(prediction)]
 
