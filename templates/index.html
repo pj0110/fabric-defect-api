@@ -1,103 +1,53 @@
-<!DOCTYPE html>
-<html>
+<script>
 
-<head>
-    <title>Fabric Defect Detection</title>
+    const imageInput = document.getElementById("imageInput");
 
-    <style>
+    imageInput.addEventListener("change", function(){
 
-        body{
-            font-family: Arial;
-            text-align: center;
-            margin-top: 50px;
-            background: #f2f2f2;
+        const file = imageInput.files[0];
+
+        document.getElementById("preview").src =
+            URL.createObjectURL(file);
+
+    });
+
+    async function uploadImage(){
+
+        const file = imageInput.files[0];
+
+        if(!file){
+
+            alert("Please select an image");
+
+            return;
         }
 
-        .container{
-            width: 400px;
-            margin: auto;
-            padding: 30px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px gray;
-        }
+        document.getElementById("result").innerHTML =
+            "Predicting... Please wait";
 
-        button{
-            padding: 10px 20px;
-            background: blue;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
+        const formData = new FormData();
 
-        button:hover{
-            background: darkblue;
-        }
+        formData.append("file", file);
 
-        img{
-            margin-top: 20px;
-            width: 250px;
-        }
-
-    </style>
-
-</head>
-
-<body>
-
-    <div class="container">
-
-        <h2>Fabric Defect Detection</h2>
-
-        <input type="file" id="imageInput">
-
-        <br><br>
-
-        <button onclick="uploadImage()">
-            Predict
-        </button>
-
-        <br>
-
-        <img id="preview">
-
-        <h3 id="result"></h3>
-
-    </div>
-
-    <script>
-
-        const imageInput = document.getElementById("imageInput");
-
-        imageInput.addEventListener("change", function(){
-
-            const file = imageInput.files[0];
-
-            document.getElementById("preview").src =
-                URL.createObjectURL(file);
-
-        });
-
-        async function uploadImage(){
-
-            const file = imageInput.files[0];
-
-            if(!file){
-                alert("Please select an image");
-                return;
-            }
-
-            const formData = new FormData();
-
-            formData.append("file", file);
+        try{
 
             const response = await fetch("/predict", {
+
                 method: "POST",
+
                 body: formData
             });
 
+            console.log(response);
+
+            if(!response.ok){
+
+                throw new Error("Server error");
+            }
+
             const data = await response.json();
+
+            console.log(data);
 
             document.getElementById("result").innerHTML =
                 `
@@ -105,10 +55,15 @@
                 <br><br>
                 Confidence: ${data.confidence}%
                 `;
+
         }
+        catch(error){
 
-    </script>
+            console.log(error);
 
-</body>
+            document.getElementById("result").innerHTML =
+                "Prediction failed";
+        }
+    }
 
-</html>
+</script>
