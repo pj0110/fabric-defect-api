@@ -10,15 +10,11 @@ app = Flask(__name__)
 
 CORS(app)
 
-# =========================
-# GLOBAL MODEL VARIABLE
-# =========================
+# =========================================================
+# MODEL
+# =========================================================
 
 model = None
-
-# =========================
-# MULTICLASS LABELS
-# =========================
 
 classes = [
     "good",
@@ -28,9 +24,9 @@ classes = [
     "thread error"
 ]
 
-# =========================
+# =========================================================
 # LOAD MODEL
-# =========================
+# =========================================================
 
 def load_my_model():
 
@@ -39,9 +35,9 @@ def load_my_model():
     if model is None:
 
         base_model = tf.keras.applications.MobileNetV2(
-            input_shape=(128,128,3),
+            input_shape=(64,64,3),
             include_top=False,
-            weights=None
+            weights='imagenet'
         )
 
         base_model.trainable = False
@@ -55,7 +51,9 @@ def load_my_model():
             activation='relu'
         )(x)
 
-        x = tf.keras.layers.Dropout(0.4)(x)
+        x = tf.keras.layers.Dropout(
+            0.4
+        )(x)
 
         output = tf.keras.layers.Dense(
             5,
@@ -73,13 +71,13 @@ def load_my_model():
 
     return model
 
-# =========================
-# IMAGE PREPROCESSING
-# =========================
+# =========================================================
+# PREPROCESS IMAGE
+# =========================================================
 
 def preprocess_image(image):
 
-    image = image.resize((128,128))
+    image = image.resize((64,64))
 
     image = np.array(image) / 255.0
 
@@ -87,64 +85,56 @@ def preprocess_image(image):
 
     return image
 
-# =========================
-# HOME PAGE
-# =========================
+# =========================================================
+# HOME
+# =========================================================
 
 @app.route("/")
 def home():
 
     return render_template("index.html")
 
-# =========================
-# PREDICTION ROUTE
-# =========================
+# =========================================================
+# PREDICT
+# =========================================================
 
 @app.route("/predict", methods=["POST"])
 def predict():
 
-    try:
-
-        if "file" not in request.files:
-
-            return jsonify({
-                "error": "No file uploaded"
-            })
-
-        file = request.files["file"]
-
-        image = Image.open(
-            io.BytesIO(file.read())
-        ).convert("RGB")
-
-        processed = preprocess_image(image)
-
-        loaded_model = load_my_model()
-
-        prediction = loaded_model.predict(processed)
-
-        predicted_class = classes[
-            np.argmax(prediction)
-        ]
-
-        confidence = float(
-            np.max(prediction)
-        )
+    if "file" not in request.files:
 
         return jsonify({
-            "prediction": predicted_class,
-            "confidence": round(confidence * 100, 2)
+            "error": "No file uploaded"
         })
 
-    except Exception as e:
+    file = request.files["file"]
 
-        return jsonify({
-            "error": str(e)
-        })
+    image = Image.open(
+        io.BytesIO(file.read())
+    ).convert("RGB")
 
-# =========================
-# RUN APP
-# =========================
+    processed = preprocess_image(image)
+
+    loaded_model = load_my_model()
+
+    prediction = loaded_model.predict(processed)
+
+    predicted_class = classes[
+        np.argmax(prediction)
+    ]
+
+    confidence = float(
+        np.max(prediction)
+    )
+
+    return jsonify({
+        "prediction": predicted_class,
+        "confidence": round(confidence * 100, 2)
+    })
+
+# =========================================================
+# RUN
+# =========================================================
 
 if __name__ == "__main__":
 
