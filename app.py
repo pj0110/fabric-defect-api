@@ -10,7 +10,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Load trained model
-model = tf.keras.models.load_model("fabric_model.h5")
+model = tf.keras.models.load_model("fabric_model.keras")
 
 # Classes
 classes = ["good", "defective"]
