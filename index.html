@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fabric Detector</title>
+</head>
+<body>
+
+    <h2>Upload Fabric Image</h2>
+
+    <input type="file" id="imageInput">
+    <button onclick="uploadImage()">Predict</button>
+
+    <h3 id="result"></h3>
+
+    <script>
+        async function uploadImage() {
+
+            const fileInput = document.getElementById("imageInput");
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            const response = await fetch(
+                "https://your-render-url.onrender.com/predict",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+            const data = await response.json();
+
+            document.getElementById("result").innerHTML =
+                `Prediction: ${data.prediction}
+                 <br>
+                 Confidence: ${(data.confidence * 100).toFixed(2)}%`;
+        }
+    </script>
+
+</body>
+</html>
