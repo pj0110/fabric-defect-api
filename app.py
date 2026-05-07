@@ -26,8 +26,8 @@ def load_my_model():
 
     if model is None:
 
-        base_model = tf.keras.applications.InceptionV3(
-            input_shape=(224, 224, 3),
+        base_model = tf.keras.applications.MobileNetV2(
+            input_shape=(128, 128, 3),
             include_top=False,
             weights=None
         )
@@ -53,7 +53,9 @@ def load_my_model():
             outputs=output
         )
 
-        model.load_weights("fabric_weights.weights.h5")
+        model.load_weights(
+            "fabric_weights.weights.h5"
+        )
 
     return model
 
@@ -69,7 +71,7 @@ classes = ["good", "defective"]
 
 def preprocess_image(image):
 
-    image = image.resize((224, 224))
+    image = image.resize((128, 128))
 
     image = np.array(image) / 255.0
 
@@ -93,32 +95,40 @@ def home():
 @app.route("/predict", methods=["POST"])
 def predict():
 
-    if "file" not in request.files:
+    try:
+
+        if "file" not in request.files:
+
+            return jsonify({
+                "error": "No file uploaded"
+            })
+
+        file = request.files["file"]
+
+        image = Image.open(
+            io.BytesIO(file.read())
+        ).convert("RGB")
+
+        processed = preprocess_image(image)
+
+        loaded_model = load_my_model()
+
+        prediction = loaded_model.predict(processed)
+
+        predicted_class = classes[np.argmax(prediction)]
+
+        confidence = float(np.max(prediction))
 
         return jsonify({
-            "error": "No file uploaded"
+            "prediction": predicted_class,
+            "confidence": round(confidence * 100, 2)
         })
 
-    file = request.files["file"]
+    except Exception as e:
 
-    image = Image.open(
-        io.BytesIO(file.read())
-    ).convert("RGB")
-
-    processed = preprocess_image(image)
-
-    loaded_model = load_my_model()
-
-    prediction = loaded_model.predict(processed)
-
-    predicted_class = classes[np.argmax(prediction)]
-
-    confidence = float(np.max(prediction))
-
-    return jsonify({
-        "prediction": predicted_class,
-        "confidence": round(confidence * 100, 2)
-    })
+        return jsonify({
+            "error": str(e)
+        })
 
 # =========================
 # RUN APP
